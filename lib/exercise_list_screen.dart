@@ -20,37 +20,141 @@ class _ExerciseListScreenState extends State<ExerciseListScreen> {
         valueListenable: exerciseBox.listenable(),
         builder: (context, Box<Exercise> box, _) {
           if (box.isEmpty) {
-            return const Center(
-              child: Text('Δεν υπάρχουν καταχωρημένες ασκήσεις.'),
+            return const _EmptyState(
+              title: 'Δεν υπάρχουν ασκήσεις',
+              subtitle: 'Πρόσθεσε την πρώτη σου άσκηση από την αρχική οθόνη.',
+              icon: Icons.fitness_center,
             );
           }
 
+          // Νεότερες πρώτες
           final exercises = box.values.toList().reversed.toList();
 
-          return ListView.builder(
+          return ListView.separated(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
             itemCount: exercises.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 4),
             itemBuilder: (context, index) {
               final exercise = exercises[index];
-              final key = box.keyAt(box.length - 1 - index);
+              final actualKey = box.keyAt(box.length - 1 - index);
 
-              return ListTile(
-                title: Text(exercise.name),
-                subtitle: Text(
-                  'Διάρκεια: ${exercise.duration} λεπτά - Ένταση: ${exercise.intensity} - Ημερομηνία: ${exercise.date.toLocal().toString().substring(0, 16)}',
+              final intensityColor = _intensityColor(exercise.intensity);
+
+              return Dismissible(
+                key: ValueKey(actualKey),
+                direction: DismissDirection.endToStart,
+                background: Container(
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Icon(Icons.delete, color: Colors.red),
                 ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit, color: Colors.blue),
-                      onPressed:
-                          () => _editExercise(context, box, key, exercise),
+                confirmDismiss: (_) async {
+                  return await _confirmDelete(
+                    context,
+                    box,
+                    actualKey,
+                    exercise,
+                  );
+                },
+                onDismissed: (_) async {
+                  await box.delete(actualKey);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Διαγράφηκε η άσκηση «${exercise.name}».',
+                        ),
+                      ),
+                    );
+                  }
+                },
+                child: Card(
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      radius: 22,
+                      backgroundColor:
+                          Theme.of(context).colorScheme.primaryContainer,
+                      child: const Icon(Icons.directions_run),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => _confirmDelete(context, box, key),
+                    title: Text(
+                      exercise.name,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
-                  ],
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 2),
+                        Text(
+                          'Διάρκεια: ${exercise.duration} λεπτά • ${_formatDateTime(exercise.date)}',
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: intensityColor.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: intensityColor,
+                              width: 0.6,
+                            ),
+                          ),
+                          child: Text(
+                            exercise.intensity,
+                            style: TextStyle(
+                              color: intensityColor,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    isThreeLine: true,
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          tooltip: 'Επεξεργασία',
+                          icon: const Icon(Icons.edit, color: Colors.blue),
+                          onPressed:
+                              () => _editExercise(
+                                context,
+                                box,
+                                actualKey,
+                                exercise,
+                              ),
+                        ),
+                        IconButton(
+                          tooltip: 'Διαγραφή',
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () async {
+                            final ok = await _confirmDelete(
+                              context,
+                              box,
+                              actualKey,
+                              exercise,
+                            );
+                            if (ok) {
+                              await box.delete(actualKey);
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Η άσκηση διαγράφηκε.'),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               );
             },
@@ -60,30 +164,47 @@ class _ExerciseListScreenState extends State<ExerciseListScreen> {
     );
   }
 
-  void _confirmDelete(BuildContext context, Box<Exercise> box, dynamic key) {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Επιβεβαίωση διαγραφής'),
-            content: const Text(
-              'Θέλεις σίγουρα να διαγράψεις αυτή την άσκηση;',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Ακύρωση'),
+  Color _intensityColor(String intensity) {
+    switch (intensity.trim()) {
+      case 'Χαμηλή':
+        return Colors.green;
+      case 'Μέτρια':
+        return Colors.orange;
+      case 'Υψηλή':
+        return Colors.red;
+      default:
+        return Colors.blueGrey;
+    }
+  }
+
+  Future<bool> _confirmDelete(
+    BuildContext context,
+    Box<Exercise> box,
+    dynamic key,
+    Exercise exercise,
+  ) async {
+    final result =
+        await showDialog<bool>(
+          context: context,
+          builder:
+              (context) => AlertDialog(
+                title: const Text('Επιβεβαίωση διαγραφής'),
+                content: Text('Να διαγραφεί η άσκηση «${exercise.name}»;'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text('Ακύρωση'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    child: const Text('Διαγραφή'),
+                  ),
+                ],
               ),
-              TextButton(
-                onPressed: () {
-                  box.delete(key);
-                  Navigator.of(context).pop();
-                },
-                child: const Text('Διαγραφή'),
-              ),
-            ],
-          ),
-    );
+        ) ??
+        false;
+
+    return result;
   }
 
   void _editExercise(
@@ -92,6 +213,7 @@ class _ExerciseListScreenState extends State<ExerciseListScreen> {
     dynamic key,
     Exercise exercise,
   ) {
+    final formKey = GlobalKey<FormState>();
     final nameController = TextEditingController(text: exercise.name);
     final durationController = TextEditingController(
       text: exercise.duration.toString(),
@@ -103,37 +225,55 @@ class _ExerciseListScreenState extends State<ExerciseListScreen> {
       builder:
           (context) => AlertDialog(
             title: const Text('Επεξεργασία Άσκησης'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Όνομα Άσκησης'),
-                ),
-                TextField(
-                  controller: durationController,
-                  decoration: const InputDecoration(
-                    labelText: 'Διάρκεια (λεπτά)',
+            content: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Όνομα άσκησης',
+                      hintText: 'π.χ. Τρέξιμο',
+                    ),
+                    validator:
+                        (v) =>
+                            (v == null || v.trim().isEmpty)
+                                ? 'Απαιτείται όνομα'
+                                : null,
                   ),
-                  keyboardType: TextInputType.number,
-                ),
-                DropdownButtonFormField<String>(
-                  value: intensity,
-                  items:
-                      ['Χαμηλή', 'Μέτρια', 'Υψηλή']
-                          .map(
-                            (level) => DropdownMenuItem(
-                              value: level,
-                              child: Text(level),
-                            ),
-                          )
-                          .toList(),
-                  onChanged: (value) {
-                    if (value != null) intensity = value;
-                  },
-                  decoration: const InputDecoration(labelText: 'Ένταση'),
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: durationController,
+                    decoration: const InputDecoration(
+                      labelText: 'Διάρκεια (λεπτά)',
+                      hintText: 'π.χ. 30',
+                    ),
+                    keyboardType: TextInputType.number,
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return 'Απαιτείται διάρκεια';
+                      }
+                      final n = int.tryParse(v);
+                      if (n == null || n < 0) return 'Μη έγκυρος αριθμός';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: intensity,
+                    decoration: const InputDecoration(labelText: 'Ένταση'),
+                    items: const [
+                      DropdownMenuItem(value: 'Χαμηλή', child: Text('Χαμηλή')),
+                      DropdownMenuItem(value: 'Μέτρια', child: Text('Μέτρια')),
+                      DropdownMenuItem(value: 'Υψηλή', child: Text('Υψηλή')),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) intensity = v;
+                    },
+                  ),
+                ],
+              ),
             ),
             actions: [
               TextButton(
@@ -141,20 +281,65 @@ class _ExerciseListScreenState extends State<ExerciseListScreen> {
                 child: const Text('Ακύρωση'),
               ),
               TextButton(
-                onPressed: () {
-                  final updatedExercise = Exercise(
-                    name: nameController.text,
-                    duration: int.tryParse(durationController.text) ?? 0,
+                onPressed: () async {
+                  if (!formKey.currentState!.validate()) return;
+
+                  final updated = Exercise(
+                    name: nameController.text.trim(),
+                    duration: int.parse(durationController.text.trim()),
                     intensity: intensity,
-                    date: exercise.date,
+                    date: exercise.date, // κρατάμε την αρχική ημερομηνία
                   );
-                  box.put(key, updatedExercise);
-                  Navigator.of(context).pop();
+                  await box.put(key, updated);
+                  if (context.mounted) {
+                    Navigator.of(context).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Η άσκηση ενημερώθηκε.')),
+                    );
+                  }
                 },
                 child: const Text('Αποθήκευση'),
               ),
             ],
           ),
+    );
+  }
+}
+
+String _formatDateTime(DateTime d) {
+  final date =
+      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+  final time =
+      '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+  return '$date • $time';
+}
+
+class _EmptyState extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  const _EmptyState({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 54, color: Colors.grey.shade500),
+          const SizedBox(height: 10),
+          Text(
+            title,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 6),
+          Text(subtitle, style: TextStyle(color: Colors.grey.shade600)),
+        ],
+      ),
     );
   }
 }

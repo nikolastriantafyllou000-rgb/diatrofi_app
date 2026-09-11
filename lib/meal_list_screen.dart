@@ -20,36 +20,99 @@ class _MealListScreenState extends State<MealListScreen> {
         valueListenable: mealBox.listenable(),
         builder: (context, Box<Meal> box, _) {
           if (box.isEmpty) {
-            return const Center(
-              child: Text('Δεν υπάρχουν καταχωρημένα γεύματα.'),
+            return const _EmptyState(
+              title: 'Δεν υπάρχουν γεύματα',
+              subtitle: 'Πρόσθεσε το πρώτο σου γεύμα από την αρχική οθόνη.',
+              icon: Icons.restaurant,
             );
           }
 
+          // Νεότερες εγγραφές πρώτες
           final meals = box.values.toList().reversed.toList();
 
-          return ListView.builder(
+          return ListView.separated(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
             itemCount: meals.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 4),
             itemBuilder: (context, index) {
               final meal = meals[index];
+              // Mapping από "αντεστραμμένο index" στο πραγματικό key του Hive
               final actualKey = box.keyAt(box.length - 1 - index);
 
-              return ListTile(
-                title: Text(meal.name),
-                subtitle: Text(
-                  'Θερμίδες: ${meal.calories} - Ημερομηνία: ${meal.date.toLocal().toString().substring(0, 16)}',
+              return Dismissible(
+                key: ValueKey(actualKey),
+                direction: DismissDirection.endToStart,
+                background: Container(
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Icon(Icons.delete, color: Colors.red),
                 ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit, color: Colors.blue),
-                      onPressed: () => _editMeal(context, box, actualKey, meal),
+                confirmDismiss: (_) async {
+                  return await _confirmDelete(context, box, actualKey, meal);
+                },
+                onDismissed: (_) async {
+                  await box.delete(actualKey);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Διαγράφηκε το «${meal.name}».')),
+                    );
+                  }
+                },
+                child: Card(
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      radius: 22,
+                      backgroundColor:
+                          Theme.of(context).colorScheme.primaryContainer,
+                      child: const Icon(Icons.restaurant_menu),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => _confirmDelete(context, box, actualKey),
+                    title: Text(
+                      meal.name,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
-                  ],
+                    subtitle: Text(
+                      'Θερμίδες: ${meal.calories} • ${_formatDateTime(meal.date)}',
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          tooltip: 'Επεξεργασία',
+                          icon: const Icon(Icons.edit, color: Colors.blue),
+                          onPressed:
+                              () => _editMeal(context, box, actualKey, meal),
+                        ),
+                        IconButton(
+                          tooltip: 'Διαγραφή',
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () async {
+                            final ok = await _confirmDelete(
+                              context,
+                              box,
+                              actualKey,
+                              meal,
+                            );
+                            if (ok) {
+                              await box.delete(actualKey);
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Διαγράφηκε το «${meal.name}».',
+                                    ),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               );
             },
@@ -59,31 +122,42 @@ class _MealListScreenState extends State<MealListScreen> {
     );
   }
 
-  void _confirmDelete(BuildContext context, Box<Meal> box, dynamic key) {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Διαγραφή Γεύματος'),
-            content: const Text('Είσαι σίγουρος ότι θέλεις να το διαγράψεις;'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Ακύρωση'),
+  /// Dialog επιβεβαίωσης διαγραφής. Επιστρέφει true/false.
+  Future<bool> _confirmDelete(
+    BuildContext context,
+    Box<Meal> box,
+    dynamic key,
+    Meal meal,
+  ) async {
+    final result =
+        await showDialog<bool>(
+          context: context,
+          builder:
+              (context) => AlertDialog(
+                title: const Text('Διαγραφή Γεύματος'),
+                content: Text(
+                  'Θέλεις σίγουρα να διαγράψεις το «${meal.name}»;',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text('Ακύρωση'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    child: const Text('Διαγραφή'),
+                  ),
+                ],
               ),
-              TextButton(
-                onPressed: () {
-                  box.delete(key);
-                  Navigator.of(context).pop();
-                },
-                child: const Text('Διαγραφή'),
-              ),
-            ],
-          ),
-    );
+        ) ??
+        false;
+
+    return result;
   }
 
+  /// Dialog επεξεργασίας γεύματος με έλεγχο τιμών
   void _editMeal(BuildContext context, Box<Meal> box, dynamic key, Meal meal) {
+    final formKey = GlobalKey<FormState>();
     final nameController = TextEditingController(text: meal.name);
     final caloriesController = TextEditingController(
       text: meal.calories.toString(),
@@ -94,21 +168,42 @@ class _MealListScreenState extends State<MealListScreen> {
       builder:
           (context) => AlertDialog(
             title: const Text('Επεξεργασία Γεύματος'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Όνομα γεύματος',
+            content: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Όνομα γεύματος',
+                      hintText: 'π.χ. Κοτόπουλο με ρύζι',
+                    ),
+                    validator:
+                        (v) =>
+                            (v == null || v.trim().isEmpty)
+                                ? 'Απαιτείται όνομα'
+                                : null,
                   ),
-                ),
-                TextField(
-                  controller: caloriesController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Θερμίδες'),
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: caloriesController,
+                    decoration: const InputDecoration(
+                      labelText: 'Θερμίδες',
+                      hintText: 'π.χ. 520',
+                    ),
+                    keyboardType: TextInputType.number,
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return 'Απαιτούνται θερμίδες';
+                      }
+                      final n = int.tryParse(v);
+                      if (n == null || n < 0) return 'Μη έγκυρος αριθμός';
+                      return null;
+                    },
+                  ),
+                ],
+              ),
             ),
             actions: [
               TextButton(
@@ -116,20 +211,67 @@ class _MealListScreenState extends State<MealListScreen> {
                 child: const Text('Ακύρωση'),
               ),
               TextButton(
-                onPressed: () {
+                onPressed: () async {
+                  if (!formKey.currentState!.validate()) return;
+
                   final updatedMeal = Meal(
-                    name: nameController.text,
-                    calories: int.tryParse(caloriesController.text) ?? 0,
-                    date: meal.date, // δεν αλλάζουμε ημερομηνία
+                    name: nameController.text.trim(),
+                    calories: int.parse(caloriesController.text.trim()),
+                    date:
+                        meal.date, // κρατάμε την αρχική ημερομηνία καταχώρησης
                   );
 
-                  box.put(key, updatedMeal);
-                  Navigator.of(context).pop();
+                  await box.put(key, updatedMeal);
+                  if (context.mounted) {
+                    Navigator.of(context).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Το γεύμα ενημερώθηκε.')),
+                    );
+                  }
                 },
                 child: const Text('Αποθήκευση'),
               ),
             ],
           ),
+    );
+  }
+}
+
+/// Μικρό helper για όμορφη ημερομηνία/ώρα
+String _formatDateTime(DateTime d) {
+  final date =
+      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+  final time =
+      '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+  return '$date • $time';
+}
+
+class _EmptyState extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  const _EmptyState({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 54, color: Colors.grey.shade500),
+          const SizedBox(height: 10),
+          Text(
+            title,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 6),
+          Text(subtitle, style: TextStyle(color: Colors.grey.shade600)),
+        ],
+      ),
     );
   }
 }

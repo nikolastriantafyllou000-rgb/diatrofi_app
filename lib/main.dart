@@ -11,6 +11,8 @@ import 'exercise_list_screen.dart';
 import 'goal_list_screen.dart';
 import 'daily_summary_screen.dart';
 import 'stats_screen.dart';
+import 'export_screen.dart';
+import 'app_shell.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,9 +37,31 @@ class DiatrofiApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Διατροφή & Άσκηση',
-      theme: ThemeData(primarySwatch: Colors.green),
-      home: const HomeScreen(),
       debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
+        cardTheme: const CardTheme(
+          elevation: 1,
+          margin: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(16)),
+          ),
+        ),
+        inputDecorationTheme: const InputDecorationTheme(
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(14)),
+          ),
+          filled: true,
+          fillColor: Color(0xFFF7F8FA),
+        ),
+        snackBarTheme: const SnackBarThemeData(
+          behavior: SnackBarBehavior.floating,
+        ),
+      ),
+      darkTheme: ThemeData.dark(useMaterial3: true),
+      themeMode: ThemeMode.system,
+      home: const AppShell(),
     );
   }
 }
@@ -153,6 +177,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               },
               child: const Text('Στατιστικά Εβδομάδας'),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ExportScreen()),
+                );
+              },
+              child: const Text('Εξαγωγή Δεδομένων (CSV)'),
             ),
           ],
         ),

@@ -4,8 +4,21 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'models/meal.dart';
 import 'models/exercise.dart';
 
-class StatsScreen extends StatelessWidget {
+class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
+
+  @override
+  State<StatsScreen> createState() => _StatsScreenState();
+}
+
+class _StatsScreenState extends State<StatsScreen> {
+  late DateTime _weekStart; // Δευτέρα τρέχουσας εβδομάδας
+
+  @override
+  void initState() {
+    super.initState();
+    _weekStart = _weekStartOf(DateTime.now());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,16 +33,16 @@ class StatsScreen extends StatelessWidget {
           // 2ος: exercise
           valueListenable: exerciseBox.listenable(),
           builder: (context, __, ___) {
-            final now = DateTime.now();
-            final monday = _weekStart(now);
+            final monday = _weekStart;
             final sunday = monday.add(const Duration(days: 6));
 
+            // Υπολογισμοί για την επιλεγμένη εβδομάδα
             final caloriesPerDay = List<double>.filled(7, 0);
             final minutesPerDay = List<double>.filled(7, 0);
 
             for (final m in mealsBox.values) {
               if (_isSameWeek(m.date, monday)) {
-                final idx = m.date.weekday - 1;
+                final idx = m.date.weekday - 1; // 0..6 (Δε..Κυ)
                 caloriesPerDay[idx] += m.calories.toDouble();
               }
             }
@@ -46,6 +59,8 @@ class StatsScreen extends StatelessWidget {
 
             return Scaffold(
               appBar: AppBar(
+                // δεν ορίζουμε leading -> έτσι εμφανίζεται το default back
+                automaticallyImplyLeading: true,
                 title: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -56,6 +71,37 @@ class StatsScreen extends StatelessWidget {
                     ),
                   ],
                 ),
+                actions: [
+                  IconButton(
+                    tooltip: 'Προηγούμενη εβδομάδα',
+                    icon: const Icon(Icons.chevron_left),
+                    onPressed: () {
+                      setState(() {
+                        _weekStart = _weekStart.subtract(
+                          const Duration(days: 7),
+                        );
+                      });
+                    },
+                  ),
+                  IconButton(
+                    tooltip: 'Σήμερα (τρέχουσα εβδομάδα)',
+                    icon: const Icon(Icons.today),
+                    onPressed: () {
+                      setState(() {
+                        _weekStart = _weekStartOf(DateTime.now());
+                      });
+                    },
+                  ),
+                  IconButton(
+                    tooltip: 'Επόμενη εβδομάδα',
+                    icon: const Icon(Icons.chevron_right),
+                    onPressed: () {
+                      setState(() {
+                        _weekStart = _weekStart.add(const Duration(days: 7));
+                      });
+                    },
+                  ),
+                ],
               ),
               body: Padding(
                 padding: const EdgeInsets.all(16),
@@ -83,6 +129,7 @@ class StatsScreen extends StatelessWidget {
                                 unitSuffix: 'kcal',
                               ),
                               const SizedBox(height: 24),
+
                               _SectionHeader(
                                 title: 'Άσκηση (λεπτά) ανά ημέρα',
                                 trailing:
@@ -105,8 +152,7 @@ class StatsScreen extends StatelessWidget {
     );
   }
 
-  // Helpers
-  static DateTime _weekStart(DateTime d) {
+  static DateTime _weekStartOf(DateTime d) {
     final date = DateTime(d.year, d.month, d.day);
     return date.subtract(Duration(days: date.weekday - 1)); // Δευτέρα
   }
@@ -155,7 +201,7 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _BarChartBlock extends StatelessWidget {
-  final List<double> values; // Δευ..Κυρ
+  final List<double> values;
   final double maxY;
   final String unitSuffix;
 
