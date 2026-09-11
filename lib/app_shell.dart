@@ -28,33 +28,68 @@ class _AppShellState extends State<AppShell> {
       const ExportScreen(),
     ];
 
-    return Scaffold(
-      body: pages[_index],
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Αρχική',
+    return NavigationBarTheme(
+      data: NavigationBarThemeData(
+        iconTheme: WidgetStateProperty.resolveWith(
+          (states) => IconThemeData(
+            color:
+                states.contains(WidgetState.selected)
+                    ? const Color(0xFF2E7D32)
+                    : const Color(0xFF98A398),
           ),
-          NavigationDestination(
-            icon: Icon(Icons.list_alt_outlined),
-            selectedIcon: Icon(Icons.list_alt),
-            label: 'Λίστες',
+        ),
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (states) => TextStyle(
+            fontSize: 11,
+            fontWeight:
+                states.contains(WidgetState.selected)
+                    ? FontWeight.w600
+                    : FontWeight.w400,
+            color:
+                states.contains(WidgetState.selected)
+                    ? const Color(0xFF2E7D32)
+                    : const Color(0xFF98A398),
           ),
-          NavigationDestination(
-            icon: Icon(Icons.bar_chart_outlined),
-            selectedIcon: Icon(Icons.bar_chart),
-            label: 'Στατιστικά',
+        ),
+      ),
+      child: Scaffold(
+        body: pages[_index],
+        bottomNavigationBar: Container(
+          decoration: const BoxDecoration(
+            border: Border(
+              top: BorderSide(color: Color(0xFFEDEFEC), width: 1),
+            ),
           ),
-          NavigationDestination(
-            icon: Icon(Icons.download_outlined),
-            selectedIcon: Icon(Icons.download),
-            label: 'Εξαγωγή',
+          child: NavigationBar(
+            backgroundColor: Colors.white,
+            indicatorColor: const Color(0xFFE8F5E9),
+            elevation: 0,
+            selectedIndex: _index,
+            onDestinationSelected: (i) => setState(() => _index = i),
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home),
+                label: 'Αρχική',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.list_alt_outlined),
+                selectedIcon: Icon(Icons.list_alt),
+                label: 'Λίστες',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.bar_chart_outlined),
+                selectedIcon: Icon(Icons.bar_chart),
+                label: 'Στατιστικά',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.download_outlined),
+                selectedIcon: Icon(Icons.download),
+                label: 'Εξαγωγή',
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -65,70 +100,155 @@ class _HomeTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final crossAxisCount = width >= 900 ? 4 : 2;
+
+    final actions = [
+      _ActionCard(
+        icon: Icons.restaurant,
+        title: 'Καταχώρηση Διατροφής',
+        onTap:
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MealEntryScreen()),
+            ),
+      ),
+      _ActionCard(
+        icon: Icons.fitness_center,
+        title: 'Καταχώρηση Άσκησης',
+        onTap:
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ExerciseEntryScreen()),
+            ),
+      ),
+      _ActionCard(
+        icon: Icons.flag,
+        title: 'Ορισμός Στόχων',
+        onTap:
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const GoalsScreen()),
+            ),
+      ),
+      _ActionCard(
+        icon: Icons.today,
+        title: 'Ημερήσια Ανασκόπηση',
+        onTap:
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const DailySummaryScreen()),
+            ),
+      ),
+    ];
+
+    final rows = <Widget>[];
+    for (var i = 0; i < actions.length; i += crossAxisCount) {
+      final rowItems = actions.skip(i).take(crossAxisCount).toList();
+      if (rows.isNotEmpty) rows.add(const SizedBox(height: 14));
+      rows.add(
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var j = 0; j < rowItems.length; j++) ...[
+              if (j > 0) const SizedBox(width: 14),
+              Expanded(child: rowItems[j]),
+            ],
+          ],
+        ),
+      );
+    }
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Διατροφή & Άσκηση')),
-      body: Center(
+      backgroundColor: const Color(0xFFF7F9F6),
+      body: SafeArea(
+        bottom: false,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
           child: Column(
+            children: [
+              const _HomeHeader(),
+              Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1040),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+                    child: Column(children: rows),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeHeader extends StatelessWidget {
+  const _HomeHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 26),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF2E7D32), Color(0xFF1B5E20)],
+        ),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(28),
+          bottomRight: Radius.circular(28),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x261B3A1E),
+            blurRadius: 14,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1040),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Γρήγορα actions
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
+              Row(
                 children: [
-                  _ActionCard(
-                    icon: Icons.restaurant,
-                    title: 'Καταχώρηση Διατροφής',
-                    onTap:
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const MealEntryScreen(),
-                          ),
-                        ),
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.16),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.eco, color: Colors.white, size: 20),
                   ),
-                  _ActionCard(
-                    icon: Icons.fitness_center,
-                    title: 'Καταχώρηση Άσκησης',
-                    onTap:
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const ExerciseEntryScreen(),
-                          ),
-                        ),
-                  ),
-                  _ActionCard(
-                    icon: Icons.flag,
-                    title: 'Ορισμός Στόχων',
-                    onTap:
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const GoalsScreen(),
-                          ),
-                        ),
-                  ),
-                  _ActionCard(
-                    icon: Icons.today,
-                    title: 'Ημερήσια Ανασκόπηση',
-                    onTap:
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const DailySummaryScreen(),
-                          ),
-                        ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'Διατροφή & Άσκηση',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 19,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: -0.2,
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               Text(
-                'Καλώς ήρθες! Χρησιμοποίησε τις καρτέλες κάτω για γρήγορη πλοήγηση.',
-                style: Theme.of(context).textTheme.bodyMedium,
-                textAlign: TextAlign.center,
+                'Κάθε υγιεινή επιλογή σε φέρνει πιο κοντά στον στόχο σου.',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  height: 1.4,
+                ),
               ),
             ],
           ),
@@ -230,30 +350,45 @@ class _ActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 220,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Ink(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            color: Theme.of(context).colorScheme.surface,
-            boxShadow: kElevationToShadow[1],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 28),
-              const SizedBox(height: 10),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontWeight: FontWeight.w600),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Ink(
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: Colors.white,
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x1A2E7D32),
+              blurRadius: 20,
+              offset: Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8F5E9),
+                borderRadius: BorderRadius.circular(12),
               ),
-            ],
-          ),
+              child: Icon(icon, size: 22, color: const Color(0xFF2E7D32)),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 13.5,
+                color: Color(0xFF1B3A1E),
+              ),
+            ),
+          ],
         ),
       ),
     );
