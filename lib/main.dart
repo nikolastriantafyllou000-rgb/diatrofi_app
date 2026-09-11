@@ -32,6 +32,13 @@ class DiatrofiApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
+        scaffoldBackgroundColor: const Color(0xFFF7F9F6),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF2E7D32),
+          foregroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: false,
+        ),
         cardTheme: const CardTheme(
           elevation: 1,
           margin: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
