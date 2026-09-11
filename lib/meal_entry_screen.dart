@@ -26,9 +26,6 @@ class _MealEntryScreenState extends State<MealEntryScreen> {
       final box = Hive.box<Meal>('meals');
       box.add(meal);
 
-      print('Γεύμα Aποθηκεύτηκε: ${meal.name}, ${meal.calories}, ${meal.date}');
-      print('Σύνολο Γευμάτων: ${box.length}');
-
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Το γεύμα αποθηκεύτηκε με επιτυχία')),
       );
@@ -87,13 +84,8 @@ class _MealEntryScreenState extends State<MealEntryScreen> {
                         firstDate: DateTime(2000),
                         lastDate: DateTime(2100),
                       );
-                      setState(() {
-                        if (picked != null) {
-                          setState(() {
-                            _selectedDate = picked;
-                          });
-                        }
-                      });
+                      if (!mounted || picked == null) return;
+                      setState(() => _selectedDate = picked);
                     },
                     child: const Text('Επιλογή Ημερομηνίας'),
                   ),

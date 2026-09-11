@@ -14,6 +14,7 @@ class _ExerciseEntryScreenState extends State<ExerciseEntryScreen> {
   final _exerciseController = TextEditingController();
   final _durationController = TextEditingController();
   String _intensity = 'Μέτρια';
+  DateTime _selectedDate = DateTime.now();
 
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
@@ -21,14 +22,13 @@ class _ExerciseEntryScreenState extends State<ExerciseEntryScreen> {
         name: _exerciseController.text,
         duration: int.parse(_durationController.text),
         intensity: _intensity,
-        date: DateTime.now(),
+        date: _selectedDate,
       );
 
       final box = Hive.box<Exercise>('exercise');
       await box.add(exercise);
 
-      print('Άσκηση Aποθηκεύτηκε: ${exercise.name}');
-      print('Σύνολο Aσκήσεων: ${box.length}');
+      if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Η άσκηση αποθηκεύτηκε με επιτυχία')),
@@ -68,6 +68,31 @@ class _ExerciseEntryScreenState extends State<ExerciseEntryScreen> {
                 keyboardType: TextInputType.number,
                 validator:
                     (value) => value!.isEmpty ? 'Εισάγετε διάρκεια' : null,
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Text(
+                    'Ημερομηνία: ${_selectedDate.toLocal().toString().split(' ')[0]}',
+                  ),
+                  const Spacer(),
+                  ElevatedButton(
+                    onPressed: () async {
+                      DateTime? picked = await showDatePicker(
+                        context: context,
+                        initialDate: _selectedDate,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                      );
+                      if (picked != null) {
+                        setState(() {
+                          _selectedDate = picked;
+                        });
+                      }
+                    },
+                    child: const Text('Επιλογή Ημερομηνίας'),
+                  ),
+                ],
               ),
               const SizedBox(height: 20),
               DropdownButtonFormField<String>(

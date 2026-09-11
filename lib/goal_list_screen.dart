@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'models/goal.dart';
+import 'widgets/empty_state.dart';
 
 class GoalListScreen extends StatefulWidget {
   const GoalListScreen({super.key});
@@ -20,7 +21,7 @@ class _GoalListScreenState extends State<GoalListScreen> {
         valueListenable: goalBox.listenable(),
         builder: (context, Box<Goal> box, _) {
           if (box.isEmpty) {
-            return const _EmptyState(
+            return const EmptyState(
               title: 'Δεν υπάρχουν στόχοι',
               subtitle: 'Καταχώρησε έναν στόχο από την αρχική οθόνη.',
               icon: Icons.flag,
@@ -240,36 +241,6 @@ class _GoalListScreenState extends State<GoalListScreen> {
               ),
             ],
           ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  const _EmptyState({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 54, color: Colors.grey.shade500),
-          const SizedBox(height: 10),
-          Text(
-            title,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 6),
-          Text(subtitle, style: TextStyle(color: Colors.grey.shade600)),
-        ],
-      ),
     );
   }
 }
