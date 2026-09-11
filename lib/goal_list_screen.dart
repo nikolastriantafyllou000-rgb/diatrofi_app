@@ -66,9 +66,8 @@ class _GoalListScreenState extends State<GoalListScreen> {
                   child: ListTile(
                     leading: CircleAvatar(
                       radius: 22,
-                      backgroundColor:
-                          Theme.of(context).colorScheme.primaryContainer,
-                      child: const Icon(Icons.flag),
+                      backgroundColor: const Color(0xFFE8F5E9),
+                      child: const Icon(Icons.flag, color: Color(0xFF2E7D32)),
                     ),
                     title: Text(
                       'Θερμίδες/ημέρα: ${goal.calorieGoal}',

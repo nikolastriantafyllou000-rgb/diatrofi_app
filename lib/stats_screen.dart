@@ -223,6 +223,7 @@ class _BarChartBlock extends StatelessWidget {
             toY: values[i],
             width: 14,
             borderRadius: BorderRadius.circular(4),
+            color: const Color(0xFF2E7D32),
           ),
         ],
       );
@@ -233,8 +234,14 @@ class _BarChartBlock extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: kElevationToShadow[1],
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1A2E7D32),
+            blurRadius: 20,
+            offset: Offset(0, 8),
+          ),
+        ],
       ),
       child: BarChart(
         BarChartData(
