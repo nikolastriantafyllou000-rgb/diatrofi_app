@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'models/meal.dart';
+import 'utils/date_format.dart';
+import 'widgets/empty_state.dart';
 
 class MealListScreen extends StatefulWidget {
   const MealListScreen({super.key});
@@ -20,7 +22,7 @@ class _MealListScreenState extends State<MealListScreen> {
         valueListenable: mealBox.listenable(),
         builder: (context, Box<Meal> box, _) {
           if (box.isEmpty) {
-            return const _EmptyState(
+            return const EmptyState(
               title: 'Δεν υπάρχουν γεύματα',
               subtitle: 'Πρόσθεσε το πρώτο σου γεύμα από την αρχική οθόνη.',
               icon: Icons.restaurant,
@@ -75,7 +77,7 @@ class _MealListScreenState extends State<MealListScreen> {
                       style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
                     subtitle: Text(
-                      'Θερμίδες: ${meal.calories} • ${_formatDateTime(meal.date)}',
+                      'Θερμίδες: ${meal.calories} • ${formatDateTime(meal.date)}',
                     ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -233,45 +235,6 @@ class _MealListScreenState extends State<MealListScreen> {
               ),
             ],
           ),
-    );
-  }
-}
-
-/// Μικρό helper για όμορφη ημερομηνία/ώρα
-String _formatDateTime(DateTime d) {
-  final date =
-      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
-  final time =
-      '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
-  return '$date • $time';
-}
-
-class _EmptyState extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  const _EmptyState({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 54, color: Colors.grey.shade500),
-          const SizedBox(height: 10),
-          Text(
-            title,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 6),
-          Text(subtitle, style: TextStyle(color: Colors.grey.shade600)),
-        ],
-      ),
     );
   }
 }

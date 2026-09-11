@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'models/exercise.dart';
+import 'utils/date_format.dart';
+import 'widgets/empty_state.dart';
 
 class ExerciseListScreen extends StatefulWidget {
   const ExerciseListScreen({super.key});
@@ -20,7 +22,7 @@ class _ExerciseListScreenState extends State<ExerciseListScreen> {
         valueListenable: exerciseBox.listenable(),
         builder: (context, Box<Exercise> box, _) {
           if (box.isEmpty) {
-            return const _EmptyState(
+            return const EmptyState(
               title: 'Δεν υπάρχουν ασκήσεις',
               subtitle: 'Πρόσθεσε την πρώτη σου άσκηση από την αρχική οθόνη.',
               icon: Icons.fitness_center,
@@ -89,7 +91,7 @@ class _ExerciseListScreenState extends State<ExerciseListScreen> {
                       children: [
                         const SizedBox(height: 2),
                         Text(
-                          'Διάρκεια: ${exercise.duration} λεπτά • ${_formatDateTime(exercise.date)}',
+                          'Διάρκεια: ${exercise.duration} λεπτά • ${formatDateTime(exercise.date)}',
                         ),
                         const SizedBox(height: 6),
                         Container(
@@ -188,7 +190,7 @@ class _ExerciseListScreenState extends State<ExerciseListScreen> {
           context: context,
           builder:
               (context) => AlertDialog(
-                title: const Text('Επιβεβαίωση διαγραφής'),
+                title: const Text('Διαγραφή Άσκησης'),
                 content: Text('Να διαγραφεί η άσκηση «${exercise.name}»;'),
                 actions: [
                   TextButton(
@@ -306,40 +308,3 @@ class _ExerciseListScreenState extends State<ExerciseListScreen> {
   }
 }
 
-String _formatDateTime(DateTime d) {
-  final date =
-      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
-  final time =
-      '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
-  return '$date • $time';
-}
-
-class _EmptyState extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  const _EmptyState({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 54, color: Colors.grey.shade500),
-          const SizedBox(height: 10),
-          Text(
-            title,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 6),
-          Text(subtitle, style: TextStyle(color: Colors.grey.shade600)),
-        ],
-      ),
-    );
-  }
-}

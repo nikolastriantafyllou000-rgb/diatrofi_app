@@ -31,12 +31,8 @@ class _GoalsScreenState extends State<GoalsScreen> {
       final box = Hive.box<Goal>('goal');
       box.add(goal);
 
-      print(
-        'Στόχος αποθηκεύτηκε: Θερμίδες ${goal.calorieGoal}, Άσκηση ${goal.exerciseGoalMinutes}',
-      );
-
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Η άσκηση αποθηκεύτηκε με επιτυχία')),
+        const SnackBar(content: Text('Ο στόχος αποθηκεύτηκε με επιτυχία')),
       );
 
       Navigator.pop(context);
