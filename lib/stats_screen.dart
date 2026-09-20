@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'models/meal.dart';
 import 'models/exercise.dart';
+import 'models/goal.dart';
 
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
@@ -24,6 +25,7 @@ class _StatsScreenState extends State<StatsScreen> {
   Widget build(BuildContext context) {
     final mealsBox = Hive.box<Meal>('meals');
     final exerciseBox = Hive.box<Exercise>('exercise');
+    final goalBox = Hive.box<Goal>('goal');
 
     return ValueListenableBuilder(
       // 1ος: meals
@@ -56,6 +58,15 @@ class _StatsScreenState extends State<StatsScreen> {
             final totalCal = caloriesPerDay.fold<double>(0, (a, b) => a + b);
             final totalMin = minutesPerDay.fold<double>(0, (a, b) => a + b);
             final noData = totalCal == 0 && totalMin == 0;
+
+            final latestGoal = goalBox.isEmpty ? null : goalBox.values.last;
+            final daysWithinCalorieGoal =
+                (latestGoal != null && latestGoal.calorieGoal > 0)
+                    ? caloriesPerDay
+                        .where((c) => c > 0 && c <= latestGoal.calorieGoal)
+                        .length
+                    : 0;
+            final activeExerciseDays = minutesPerDay.where((m) => m > 0).length;
 
             return Scaffold(
               appBar: AppBar(
@@ -117,6 +128,38 @@ class _StatsScreenState extends State<StatsScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              Wrap(
+                                spacing: 10,
+                                runSpacing: 10,
+                                children: [
+                                  _StatChip(
+                                    icon: Icons.local_fire_department,
+                                    value:
+                                        '${(totalCal / 7).toStringAsFixed(0)} kcal',
+                                    label: 'Μ.Ο. θερμίδων/ημέρα',
+                                  ),
+                                  if (latestGoal != null &&
+                                      latestGoal.calorieGoal > 0)
+                                    _StatChip(
+                                      icon: Icons.check_circle_outline,
+                                      value: '$daysWithinCalorieGoal/7',
+                                      label: 'Ημέρες εντός στόχου',
+                                    ),
+                                  _StatChip(
+                                    icon: Icons.directions_run,
+                                    value:
+                                        '${(totalMin / 7).toStringAsFixed(0)} λεπτά',
+                                    label: 'Μ.Ο. άσκησης/ημέρα',
+                                  ),
+                                  _StatChip(
+                                    icon: Icons.event_available,
+                                    value: '$activeExerciseDays/7',
+                                    label: 'Ενεργές ημέρες',
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 20),
+
                               _SectionHeader(
                                 title: 'Θερμίδες ανά ημέρα',
                                 trailing:
@@ -125,8 +168,17 @@ class _StatsScreenState extends State<StatsScreen> {
                               const SizedBox(height: 8),
                               _BarChartBlock(
                                 values: caloriesPerDay,
-                                maxY: _niceCeil(caloriesPerDay),
+                                maxY: _niceCeil([
+                                  ...caloriesPerDay,
+                                  if (latestGoal != null)
+                                    latestGoal.calorieGoal.toDouble(),
+                                ]),
                                 unitSuffix: 'kcal',
+                                goalLine:
+                                    (latestGoal != null &&
+                                            latestGoal.calorieGoal > 0)
+                                        ? latestGoal.calorieGoal.toDouble()
+                                        : null,
                               ),
                               const SizedBox(height: 24),
 
@@ -138,8 +190,18 @@ class _StatsScreenState extends State<StatsScreen> {
                               const SizedBox(height: 8),
                               _BarChartBlock(
                                 values: minutesPerDay,
-                                maxY: _niceCeil(minutesPerDay),
+                                maxY: _niceCeil([
+                                  ...minutesPerDay,
+                                  if (latestGoal != null)
+                                    latestGoal.exerciseGoalMinutes.toDouble(),
+                                ]),
                                 unitSuffix: 'λεπτά',
+                                goalLine:
+                                    (latestGoal != null &&
+                                            latestGoal.exerciseGoalMinutes > 0)
+                                        ? latestGoal.exerciseGoalMinutes
+                                            .toDouble()
+                                        : null,
                               ),
                             ],
                           ),
@@ -179,6 +241,67 @@ class _StatsScreenState extends State<StatsScreen> {
   }
 }
 
+class _StatChip extends StatelessWidget {
+  final IconData icon;
+  final String value;
+  final String label;
+
+  const _StatChip({
+    required this.icon,
+    required this.value,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark ? const Color(0xFF1C241B) : Colors.white;
+    final valueColor =
+        isDark ? const Color(0xFFEAF1E8) : const Color(0xFF1B3A1E);
+    final labelColor =
+        isDark ? const Color(0xFF9CB098) : const Color(0xFF66766A);
+    final shadowColor =
+        isDark ? const Color(0x40000000) : const Color(0x1A2E7D32);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: shadowColor,
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 18, color: const Color(0xFF2E7D32)),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                value,
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                  color: valueColor,
+                ),
+              ),
+              Text(label, style: TextStyle(fontSize: 11, color: labelColor)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _SectionHeader extends StatelessWidget {
   final String title;
   final String? trailing;
@@ -204,11 +327,13 @@ class _BarChartBlock extends StatelessWidget {
   final List<double> values;
   final double maxY;
   final String unitSuffix;
+  final double? goalLine;
 
   const _BarChartBlock({
     required this.values,
     required this.maxY,
     required this.unitSuffix,
+    this.goalLine,
   });
 
   static const _days = ['Δε', 'Τρ', 'Τε', 'Πε', 'Πα', 'Σα', 'Κυ'];
@@ -249,6 +374,29 @@ class _BarChartBlock extends StatelessWidget {
           minY: 0,
           gridData: FlGridData(show: true, horizontalInterval: maxY / 4),
           borderData: FlBorderData(show: false),
+          extraLinesData:
+              goalLine == null
+                  ? const ExtraLinesData()
+                  : ExtraLinesData(
+                    horizontalLines: [
+                      HorizontalLine(
+                        y: goalLine!,
+                        color: const Color(0xFFEF6C00),
+                        strokeWidth: 2,
+                        dashArray: const [6, 4],
+                        label: HorizontalLineLabel(
+                          show: true,
+                          alignment: Alignment.topRight,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Color(0xFFEF6C00),
+                            fontWeight: FontWeight.w600,
+                          ),
+                          labelResolver: (_) => 'Στόχος',
+                        ),
+                      ),
+                    ],
+                  ),
           titlesData: FlTitlesData(
             leftTitles: AxisTitles(
               sideTitles: SideTitles(

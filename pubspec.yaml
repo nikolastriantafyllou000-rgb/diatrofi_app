@@ -25,6 +25,19 @@ dev_dependencies:
   hive_generator: ^2.0.1
   build_runner: ^2.4.6
   flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.4.3
+
+flutter_native_splash:
+  color: "#F7F9F6"
+  image: assets/icon.png
+  color_dark: "#10140F"
+  image_dark: assets/icon.png
+  android_12:
+    image: assets/icon.png
+    icon_background_color: "#F7F9F6"
+    image_dark: assets/icon.png
+    icon_background_color_dark: "#10140F"
+  web: true
 
 flutter_launcher_icons:
   android: true

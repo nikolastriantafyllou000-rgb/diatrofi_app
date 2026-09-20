@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:video_player/video_player.dart';
 import 'meal_entry_screen.dart';
 import 'exercise_entry_screen.dart';
@@ -9,7 +10,9 @@ import 'goal_list_screen.dart';
 import 'daily_summary_screen.dart';
 import 'stats_screen.dart';
 import 'export_screen.dart';
-import 'theme_controller.dart';
+import 'settings_screen.dart';
+import 'models/meal.dart';
+import 'models/exercise.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -61,7 +64,10 @@ class _AppShellState extends State<AppShell> {
         ),
       ),
       child: Scaffold(
-        body: pages[_index],
+        body: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          child: KeyedSubtree(key: ValueKey(_index), child: pages[_index]),
+        ),
         bottomNavigationBar: Container(
           decoration: BoxDecoration(
             border: Border(
@@ -179,6 +185,7 @@ class _HomeTab extends StatelessWidget {
           child: Column(
             children: [
               const _HomeHeader(),
+              const _StreakBanner(),
               Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 1040),
@@ -186,6 +193,206 @@ class _HomeTab extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
                     child: Column(children: rows),
                   ),
+                ),
+              ),
+              const _TipOfTheDayCard(),
+              const SizedBox(height: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StreakBanner extends StatelessWidget {
+  const _StreakBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final mealsBox = Hive.box<Meal>('meals');
+    final exerciseBox = Hive.box<Exercise>('exercise');
+
+    return ValueListenableBuilder(
+      valueListenable: mealsBox.listenable(),
+      builder: (context, Box<Meal> meals, _) {
+        return ValueListenableBuilder(
+          valueListenable: exerciseBox.listenable(),
+          builder: (context, Box<Exercise> exercises, __) {
+            final streak = _computeStreak(
+              meals.values.map((m) => m.date),
+              exercises.values.map((e) => e.date),
+            );
+            if (streak < 1) return const SizedBox.shrink();
+
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            final cardColor = isDark ? const Color(0xFF1C241B) : Colors.white;
+            final textColor =
+                isDark ? const Color(0xFFEAF1E8) : const Color(0xFF1B3A1E);
+            final shadowColor =
+                isDark ? const Color(0x40000000) : const Color(0x1A2E7D32);
+
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1040),
+                child: Container(
+                  margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: cardColor,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: shadowColor,
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      const Text('🔥', style: TextStyle(fontSize: 20)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          streak == 1
+                              ? 'Καταγραφή 1 ημέρας σερί!'
+                              : 'Καταγραφή $streak ημερών σερί!',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                            color: textColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  int _computeStreak(
+    Iterable<DateTime> mealDates,
+    Iterable<DateTime> exerciseDates,
+  ) {
+    final activeDays = <DateTime>{};
+    for (final d in mealDates) {
+      activeDays.add(DateTime(d.year, d.month, d.day));
+    }
+    for (final d in exerciseDates) {
+      activeDays.add(DateTime(d.year, d.month, d.day));
+    }
+
+    var day = DateTime.now();
+    day = DateTime(day.year, day.month, day.day);
+    if (!activeDays.contains(day)) {
+      day = day.subtract(const Duration(days: 1));
+    }
+
+    var streak = 0;
+    while (activeDays.contains(day)) {
+      streak++;
+      day = day.subtract(const Duration(days: 1));
+    }
+    return streak;
+  }
+}
+
+class _TipOfTheDayCard extends StatelessWidget {
+  const _TipOfTheDayCard();
+
+  static const _tips = [
+    'Πρόσθεσε μια μερίδα λαχανικά παραπάνω στο επόμενο γεύμα σου.',
+    'Πιες ένα ποτήρι νερό πριν από κάθε γεύμα — βοηθά και στον κορεσμό.',
+    'Προτίμησε ολικής άλεσης δημητριακά αντί για επεξεργασμένα.',
+    'Μια σύντομη βόλτα 10 λεπτών μετά το φαγητό βοηθά την πέψη.',
+    'Βάλε στόχο 5 μερίδες φρούτα/λαχανικά σήμερα.',
+    'Μείωσε λίγο τη ζάχαρη στον καφέ ή το τσάι σου.',
+    'Καλό πρωινό με πρωτεΐνη σε κρατά χορτάτο ως το μεσημέρι.',
+    'Προγραμμάτισε τα γεύματα της εβδομάδας — γλιτώνεις κακές επιλογές.',
+    'Δοκίμασε ένα κλάσμα λιγότερο αλάτι στο σημερινό σου φαγητό.',
+    'Ξεκίνα το γεύμα με σαλάτα — τρως πιο συνειδητά στη συνέχεια.',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final dayOfYear = now.difference(DateTime(now.year, 1, 1)).inDays;
+    final tip = _tips[dayOfYear % _tips.length];
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark ? const Color(0xFF1C241B) : Colors.white;
+    final textColor =
+        isDark ? const Color(0xFFEAF1E8) : const Color(0xFF1B3A1E);
+    final labelColor =
+        isDark ? const Color(0xFF9CB098) : const Color(0xFF66766A);
+    final shadowColor =
+        isDark ? const Color(0x40000000) : const Color(0x1A2E7D32);
+
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1040),
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: cardColor,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: shadowColor,
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8F5E9),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.lightbulb_outline,
+                  color: Color(0xFF2E7D32),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Tip της ημέρας',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: labelColor,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      tip,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: textColor,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -213,12 +420,21 @@ class _HomeHeaderState extends State<_HomeHeader> {
     _controller =
         VideoPlayerController.asset('assets/videos/home_hero.mp4')
           ..setLooping(true)
-          ..setVolume(0)
-          ..initialize().then((_) {
-            if (!mounted) return;
-            setState(() => _videoReady = true);
-            _controller.play();
-          });
+          ..setVolume(0);
+    _initializeVideo();
+  }
+
+  Future<void> _initializeVideo() async {
+    try {
+      await _controller.initialize();
+      if (!mounted) return;
+      setState(() => _videoReady = true);
+      await _controller.play();
+    } catch (_) {
+      // Ο video_player δεν υποστηρίζεται σε όλες τις πλατφόρμες (π.χ.
+      // Windows desktop) — κρατάμε το gradient fallback αντί να καταρρεύσει
+      // η εφαρμογή.
+    }
   }
 
   @override
@@ -320,7 +536,20 @@ class _HomeHeaderState extends State<_HomeHeader> {
                               ),
                             ),
                           ),
-                          const _ThemeToggleButton(),
+                          IconButton(
+                            tooltip: 'Ρυθμίσεις',
+                            icon: const Icon(
+                              Icons.settings_outlined,
+                              color: Colors.white,
+                            ),
+                            onPressed:
+                                () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const SettingsScreen(),
+                                  ),
+                                ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 16),
@@ -341,35 +570,6 @@ class _HomeHeaderState extends State<_HomeHeader> {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _ThemeToggleButton extends StatelessWidget {
-  const _ThemeToggleButton();
-
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<ThemeMode>(
-      valueListenable: themeModeNotifier,
-      builder: (context, mode, _) {
-        final isDark =
-            mode == ThemeMode.dark ||
-            (mode == ThemeMode.system &&
-                MediaQuery.platformBrightnessOf(context) == Brightness.dark);
-
-        return IconButton(
-          tooltip:
-              isDark
-                  ? 'Ενεργοποίηση φωτεινού θέματος'
-                  : 'Ενεργοποίηση σκοτεινού θέματος',
-          icon: Icon(
-            isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-            color: Colors.white,
-          ),
-          onPressed: () => toggleThemeMode(isCurrentlyDark: isDark),
-        );
-      },
     );
   }
 }
