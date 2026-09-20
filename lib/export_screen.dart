@@ -1,11 +1,11 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as p;
 import 'models/meal.dart';
 import 'models/exercise.dart';
 import 'models/goal.dart';
+import 'export_stub.dart'
+    if (dart.library.io) 'export_io.dart'
+    if (dart.library.html) 'export_web.dart';
 
 class ExportScreen extends StatefulWidget {
   const ExportScreen({super.key});
@@ -19,7 +19,6 @@ class _ExportScreenState extends State<ExportScreen> {
   String? _lastSavedPath;
 
   static String get _sep => ';';
-  static String get _bom => '\uFEFF';
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +44,7 @@ class _ExportScreenState extends State<ExportScreen> {
               label:
                   _busy
                       ? const Text('Γίνεται εξαγωγή...')
-                      : const Text('Εξαγωγή όλων (3 CSV)'),
+                      : const Text('Εξαγωγή όλων (Γεύματα, Ασκήσεις, Στόχοι)'),
             ),
 
             const SizedBox(height: 16),
@@ -67,46 +66,26 @@ class _ExportScreenState extends State<ExportScreen> {
       final exerciseBox = Hive.box<Exercise>('exercise');
       final goalBox = Hive.box<Goal>('goal');
 
-      // 1) Προσπαθούμε Downloads (Windows/desktop).
-      Directory? baseDir;
-      try {
-        baseDir = await getDownloadsDirectory();
-      } catch (_) {
-        baseDir = null;
-      }
-      // 2) Fallback σε Documents αν δεν υπάρχει Downloads.
-      baseDir ??= await getApplicationDocumentsDirectory();
-
-      final exportDir = Directory(p.join(baseDir.path, 'diatrofi_exports'));
-      await exportDir.create(recursive: true);
-
       final timestamp = _ts();
 
-      // --- Meals CSV ---
       final mealsCsv = _buildMealsCsv(mealsBox.values.toList());
-      final mealsPath = p.join(exportDir.path, 'meals_$timestamp.csv');
-      await File(mealsPath).writeAsString(_bom + mealsCsv);
-
-      // --- Exercises CSV ---
       final exercisesCsv = _buildExercisesCsv(exerciseBox.values.toList());
-      final exercisesPath = p.join(exportDir.path, 'exercises_$timestamp.csv');
-      await File(exercisesPath).writeAsString(_bom + exercisesCsv);
-
-      // --- Goals CSV ---
       final goalsCsv = _buildGoalsCsv(goalBox.values.toList());
-      final goalsPath = p.join(exportDir.path, 'goals_$timestamp.csv');
-      await File(goalsPath).writeAsString(_bom + goalsCsv);
+
+      final savedTo = await saveExportFiles({
+        'meals_$timestamp.csv': mealsCsv,
+        'exercises_$timestamp.csv': exercisesCsv,
+        'goals_$timestamp.csv': goalsCsv,
+      });
 
       setState(() {
-        _lastSavedPath = exportDir.path;
+        _lastSavedPath = savedTo;
       });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Η εξαγωγή ολοκληρώθηκε! \nΦάκελος: ${exportDir.path}',
-            ),
+            content: Text('Η εξαγωγή ολοκληρώθηκε! \nΦάκελος: $savedTo'),
             duration: const Duration(seconds: 4),
           ),
         );

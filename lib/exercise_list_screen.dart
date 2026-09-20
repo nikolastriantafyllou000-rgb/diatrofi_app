@@ -309,4 +309,3 @@ class _ExerciseListScreenState extends State<ExerciseListScreen> {
     );
   }
 }
-
