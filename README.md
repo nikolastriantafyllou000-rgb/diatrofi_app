@@ -1,16 +1,56 @@
-# diatrofi_app
+# Διατροφή & Άσκηση
 
-A new Flutter project.
+Εφαρμογή παρακολούθησης διατροφής, άσκησης και προσωπικών στόχων, χτισμένη με Flutter (web + mobile).
 
-## Getting Started
+🔗 **Ζωντανή έκδοση:** https://nikolastriantafyllou000-rgb.github.io/diatrofi_app/
 
-This project is a starting point for a Flutter application.
+## Λειτουργίες
 
-A few resources to get you started if this is your first Flutter project:
+- Καταχώρηση γευμάτων (όνομα, θερμίδες, ημερομηνία)
+- Καταχώρηση άσκησης (τύπος, διάρκεια, ένταση, ημερομηνία)
+- Ορισμός προσωπικών στόχων (ημερήσιος στόχος θερμίδων & λεπτών άσκησης)
+- Ιστορικό καταχωρήσεων με δυνατότητα επεξεργασίας/διαγραφής
+- Ημερήσια ανασκόπηση σε σχέση με τους στόχους
+- Εβδομαδιαία στατιστικά με γραφήματα και γραμμή στόχου
+- Εξαγωγή όλων των δεδομένων σε CSV
+- Streak καταγραφής και καθημερινό tip διατροφής
+- Φωτεινό/σκούρο θέμα με αποθήκευση επιλογής
+- Πλήρως αποκριτικό σχέδιο (mobile & desktop πλάτη)
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## Τεχνολογίες
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- **Flutter** (Dart) — web + mobile (Android/iOS) + desktop (dev)
+- **Hive** — τοπική αποθήκευση δεδομένων (χωρίς server/backend)
+- **fl_chart** — γραφήματα στατιστικών
+- **video_player** — βίντεο φόντο στην αρχική οθόνη (web & mobile)
+
+## Αρχιτεκτονική
+
+Η εφαρμογή είναι αμιγώς client-side: όλα τα δεδομένα αποθηκεύονται τοπικά στη συσκευή/browser του χρήστη μέσω Hive (IndexedDB σε web, τοπικά αρχεία σε mobile/desktop). Δεν υπάρχει server, API, ή λογαριασμοί χρηστών — κάθε συσκευή/browser έχει τα δικά της δεδομένα.
+
+```
+lib/
+  models/              Μοντέλα δεδομένων Hive (Meal, Exercise, Goal)
+  *_entry_screen.dart  Φόρμες καταχώρησης
+  *_list_screen.dart   Λίστες προβολής/επεξεργασίας
+  stats_screen.dart    Εβδομαδιαία στατιστικά
+  export_*.dart        Εξαγωγή CSV (ξεχωριστή υλοποίηση για web/desktop/mobile)
+  app_shell.dart        Πλοήγηση, αρχική οθόνη
+  settings_screen.dart  Ρυθμίσεις (θέμα)
+  theme_controller.dart Διαχείριση φωτεινού/σκούρου θέματος
+```
+
+## Εκτέλεση τοπικά
+
+```bash
+flutter pub get
+flutter run -d chrome   # για web
+flutter run              # για συνδεδεμένη συσκευή/emulator
+```
+
+## Δημοσίευση (GitHub Pages)
+
+```bash
+flutter build web --base-href /diatrofi_app/
+# το περιεχόμενο του build/web ανεβαίνει στο branch gh-pages
+```
